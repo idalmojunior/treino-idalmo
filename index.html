@@ -421,12 +421,16 @@ async function removeFisioSession(id) {
 }
 
 // UTILS
-function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
+// getTodayKey defined above with getWeekDayKey
 function getWeekDayKey(key) {
   const map = {seg:1,ter:2,qua:3,qui:4,sex:5,sab:6,dom:0};
   const t = new Date(); const diff = map[key] - t.getDay();
   const d = new Date(t); d.setDate(t.getDate() + diff);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  // Use ISO format YYYY-MM-DD to avoid ambiguity across months/years
+  return d.toISOString().split('T')[0];
+}
+function getTodayKey() {
+  return new Date().toISOString().split('T')[0];
 }
 function ytBtn(url, label) {
   return `<a class="yt-link" href="${url}" target="_blank"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${label}</a>`;
@@ -528,7 +532,7 @@ function updateStats() {
   document.getElementById('statSemana').textContent = `${weekDone}/5`;
   document.getElementById('statFisio').textContent = fisioCache.length;
   let seq = 0; const today = new Date();
-  for(let i=0;i<30;i++){const d=new Date(today);d.setDate(today.getDate()-i);const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;if(treinoCache[k]?.done)seq++;else if(i>0)break;}
+  for(let i=0;i<30;i++){const d=new Date(today);d.setDate(today.getDate()-i);const k=d.toISOString().split('T')[0];if(treinoCache[k]?.done)seq++;else if(i>0)break;}
   document.getElementById('statSequencia').textContent = seq;
 }
 
@@ -545,11 +549,11 @@ function renderHistory() {
   for(let m=currentMonth;m>=Math.max(0,currentMonth-2);m--){
     const y=currentYear;const monthName=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
     const daysInMonth=new Date(y,m+1,0).getDate();const firstDay=new Date(y,m,1).getDay();
-    const doneCount=Object.entries(treinoCache).filter(([k,v])=>{const parts=k.split('-');return parseInt(parts[1])===m&&parseInt(parts[0])===y&&v.done;}).length;
+    const doneCount=Object.entries(treinoCache).filter(([k,v])=>{const parts=k.split('-');return parseInt(parts[0])===y&&parseInt(parts[1])-1===m&&v.done;}).length;
     const section=document.createElement('div');section.className='history-month';
     let h='<div class="weekday-labels">'+['D','S','T','Q','Q','S','S'].map(d=>`<div class="weekday-label">${d}</div>`).join('')+'</div><div class="history-heatmap">';
     for(let i=0;i<firstDay;i++)h+='<div class="heat-day"></div>';
-    for(let d=1;d<=daysInMonth;d++){const k=`${y}-${m}-${d}`;h+=`<div class="heat-day${treinoCache[k]?.done?' done':''}">${d}</div>`;}
+    for(let d=1;d<=daysInMonth;d++){const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;h+=`<div class="heat-day${treinoCache[k]?.done?' done':''}">${d}</div>`;}
     h+='</div>';
     section.innerHTML=`<div class="history-month-title">${monthName}</div>${h}<div class="history-summary"><div class="sum-item"><div class="sum-val">${doneCount}</div><div class="sum-label">Treinos realizados</div></div><div class="sum-item"><div class="sum-val">${doneCount>0?Math.round((doneCount/22)*100):0}%</div><div class="sum-label">Consistência</div></div></div>`;
     wrap.appendChild(section);
