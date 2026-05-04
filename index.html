@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treino — Idalmo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f0f;--surface:#181818;--surface2:#222;--border:#2a2a2a;
+  --accent:#c8f135;--accent2:#4ade80;--accent3:#38bdf8;
+  --text:#f0f0f0;--muted:#888;--danger:#f87171;--warn:#fbbf24;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:360px;}
+.login-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);margin-bottom:4px;}
+.login-sub{font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2rem;}
+.field{margin-bottom:1rem;}
+.field label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:5px;}
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;padding:10px 12px;outline:none;transition:border-color 0.2s;}
+.field input:focus{border-color:var(--accent);}
+.btn-primary{width:100%;background:var(--accent);border:none;border-radius:10px;color:#000;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;padding:11px;cursor:pointer;transition:opacity 0.2s;text-transform:uppercase;letter-spacing:0.05em;}
+.btn-primary:hover{opacity:0.85;}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.login-toggle{text-align:center;margin-top:1rem;font-size:0.8rem;color:var(--muted);}
+.login-toggle span{color:var(--accent);cursor:pointer;font-weight:500;}
+.login-toggle span:hover{text-decoration:underline;}
+.login-error{background:#2a1a1a;border:1px solid var(--danger);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:var(--danger);margin-bottom:1rem;display:none;}
+
+/* APP */
+#app{display:none;}
+.header{padding:1.2rem 1.5rem 0.8rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.header-left h1{font-family:'Syne',sans-serif;font-size:clamp(1.4rem,4vw,2rem);font-weight:800;letter-spacing:-0.03em;color:var(--accent);line-height:1;}
+.header-left p{font-size:0.7rem;color:var(--muted);margin-top:2px;letter-spacing:0.05em;text-transform:uppercase;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.month-nav{display:flex;align-items:center;gap:6px;}
+.month-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.month-nav button:hover{background:var(--accent);color:#000;}
+.month-label{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:600;min-width:110px;text-align:center;}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:0.7rem;font-family:'Syne',sans-serif;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.2s;}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0.8rem 1.5rem;border-bottom:1px solid var(--border);}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.6rem 0.8rem;}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;}
+.stat-label{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:1px;}
+.stat.green .stat-val{color:var(--accent);}
+.stat.blue .stat-val{color:var(--accent3);}
+.stat.yellow .stat-val{color:var(--warn);}
+.stat.red .stat-val{color:var(--danger);}
+
+.tabs{display:flex;gap:4px;padding:0.8rem 1.5rem 0;flex-wrap:wrap;}
+.tab{font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:5px 11px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all 0.2s;white-space:nowrap;}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* WEEK */
+.week-grid{padding:0.8rem 1.5rem;display:flex;flex-direction:column;gap:8px;}
+.day-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color 0.2s;}
+.day-card.done{border-color:var(--accent);}
+.day-card.rest{opacity:0.65;}
+.day-header{display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem;cursor:pointer;gap:8px;}
+.day-left{display:flex;align-items:center;gap:9px;min-width:0;}
+.day-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;}
+.day-card.done .day-dot{background:var(--accent);}
+.day-name{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;}
+.day-type{font-size:0.7rem;color:var(--muted);margin-top:1px;}
+.day-right{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.tag{font-size:0.58rem;font-weight:500;padding:2px 6px;border-radius:8px;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;}
+.tag.musculo{background:#1a2a3a;color:var(--accent3);}
+.tag.jiu{background:#2a1a1a;color:var(--danger);}
+.tag.natacao{background:#1a2a2a;color:var(--accent2);}
+.tag.descanso{background:#1e1e1e;color:var(--muted);}
+.btn-check{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:20px;font-size:0.65rem;font-family:'Syne',sans-serif;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.2s;white-space:nowrap;}
+.btn-check:hover{border-color:var(--accent);color:var(--accent);}
+.day-card.done .btn-check{background:var(--accent);color:#000;border-color:var(--accent);}
+.chevron{color:var(--muted);font-size:0.6rem;transition:transform 0.2s;}
+.day-card.open .chevron{transform:rotate(180deg);}
+.day-body{display:none;padding:0 1rem 0.9rem;border-top:1px solid var(--border);}
+.day-card.open .day-body{display:block;}
+.section-label{font-size:0.62rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin:10px 0 5px;}
+.warmup-block{background:var(--surface2);border-radius:8px;padding:0.65rem 0.85rem;margin-bottom:6px;}
+.warmup-title{font-size:0.78rem;font-weight:500;color:var(--text);margin-bottom:3px;}
+.warmup-steps{font-size:0.73rem;color:var(--muted);line-height:1.7;}
+.yt-link{display:inline-flex;align-items:center;gap:5px;background:#1a1a1a;border:1px solid #333;border-radius:7px;padding:4px 9px;font-size:0.7rem;color:#ff5555;text-decoration:none;margin-top:5px;transition:all 0.2s;}
+.yt-link:hover{background:#2a1a1a;border-color:#ff5555;}
+.yt-icon{width:13px;height:13px;}
+.exercise-list{display:flex;flex-direction:column;gap:3px;}
+.exercise{display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:5px 0;border-bottom:1px solid var(--border);}
+.exercise:last-child{border-bottom:none;}
+.ex-name{color:var(--text);}
+.ex-detail{color:var(--muted);font-size:0.7rem;}
+.obs-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;padding:6px 9px;margin-top:7px;resize:none;outline:none;}
+.obs-input:focus{border-color:var(--accent);}
+.ombro-alert{background:#1a1500;border:1px solid #3a3000;border-radius:7px;padding:5px 9px;margin-top:5px;font-size:0.72rem;color:var(--warn);}
+.saving-indicator{font-size:0.65rem;color:var(--muted);margin-top:4px;display:none;}
+
+/* FOOD */
+.food-wrap{padding:0.8rem 1.5rem;}
+.food-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0.9rem 1rem;margin-bottom:8px;}
+.food-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.macro-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.macro-pill{font-size:0.65rem;padding:3px 9px;border-radius:20px;font-weight:500;}
+.macro-pill.prot{background:#1a3a2a;color:var(--accent2);}
+.macro-pill.carb{background:#2a2a1a;color:var(--warn);}
+.macro-pill.fat{background:#2a1a2a;color:var(--purple);}
+.macro-pill.cal{background:#1a1a2a;color:var(--accent3);}
+.day-selector{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
+.day-btn{font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:600;text-transform:uppercase;padding:4px 9px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all 0.2s;}
+.day-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.food-row{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.78rem;}
+.food-row:last-child{border-bottom:none;}
+.food-time{font-size:0.65rem;color:var(--accent);font-weight:600;min-width:36px;padding-top:2px;font-family:'Syne',sans-serif;}
+.food-content{flex:1;line-height:1.5;}
+.food-macro{font-size:0.65rem;color:var(--muted);margin-top:2px;}
+.tip-box{background:#1a1a00;border:1px solid #333300;border-radius:7px;padding:7px 9px;font-size:0.73rem;color:var(--warn);margin-top:7px;line-height:1.5;}
+.creatina-box{background:#001a2a;border:1px solid #003355;border-radius:7px;padding:7px 9px;font-size:0.73rem;color:var(--accent3);margin-top:7px;line-height:1.5;}
+
+/* CARDIO */
+.cardio-wrap{padding:0.8rem 1.5rem;}
+.cardio-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0.9rem 1rem;margin-bottom:8px;}
+.week-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.78rem;}
+.week-row:last-child{border-bottom:none;}
+.week-num{font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;color:var(--accent);min-width:48px;}
+
+/* HISTORY */
+.history-wrap{padding:0.8rem 1.5rem;}
+.history-month{margin-bottom:1.5rem;}
+.history-month-title{font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;}
+.weekday-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;}
+.weekday-label{font-size:0.55rem;color:var(--muted);text-align:center;text-transform:uppercase;}
+.history-heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.heat-day{aspect-ratio:1;border-radius:4px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:0.55rem;color:var(--muted);}
+.heat-day.done{background:var(--accent);color:#000;font-weight:700;}
+.history-summary{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px;}
+.sum-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.6rem;}
+.sum-val{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:var(--accent);}
+.sum-label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+
+/* FISIO */
+.fisio-wrap{padding:0.8rem 1.5rem;}
+.fisio-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0.9rem 1rem;margin-bottom:8px;}
+.fisio-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:7px;}
+.fisio-exercise{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.78rem;}
+.fisio-exercise:last-child{border-bottom:none;}
+.fisio-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:0.6rem;}
+.fisio-check.checked{background:var(--accent2);border-color:var(--accent2);color:#000;}
+
+.hidden{display:none!important;}
+.bottom-spacer{height:80px;}
+.sync-status{font-size:0.65rem;color:var(--muted);text-align:center;padding:4px;display:none;}
+.sync-status.show{display:block;}
+
+@media(max-width:480px){
+  .stats-bar{grid-template-columns:repeat(2,1fr);}
+  .header,.week-grid,.stats-bar,.tabs,.history-wrap,.fisio-wrap,.food-wrap,.cardio-wrap{padding-left:1rem;padding-right:1rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">IDALMO</div>
+    <div class="login-sub">Treino · Alimentação · Recuperação</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
+    <div class="field"><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn" onclick="handleAuth()">Entrar</button>
+    <div class="login-toggle" id="authToggle">Não tem conta? <span onclick="toggleMode()">Criar conta</span></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <h1>IDALMO</h1>
+      <p id="userEmail" style="font-size:0.65rem"></p>
+    </div>
+    <div class="header-right">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <div class="month-label" id="monthLabel">—</div>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+      <button class="btn-logout" onclick="handleLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-val" id="statFeitos">0</div><div class="stat-label">Treinos feitos</div></div>
+    <div class="stat blue"><div class="stat-val" id="statSemana">0/5</div><div class="stat-label">Esta semana</div></div>
+    <div class="stat yellow"><div class="stat-val" id="statSequencia">0</div><div class="stat-label">Dias seguidos</div></div>
+    <div class="stat red"><div class="stat-val" id="statFisio">0</div><div class="stat-label">Sessões fisio</div></div>
+  </div>
+
+  <div class="sync-status" id="syncStatus">Sincronizando...</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="setTab('semana')">Semana</div>
+    <div class="tab" onclick="setTab('alimentacao')">Alimentação</div>
+    <div class="tab" onclick="setTab('cardio')">Cardio/Gás</div>
+    <div class="tab" onclick="setTab('historico')">Histórico</div>
+    <div class="tab" onclick="setTab('fisio')">Fisio</div>
+  </div>
+
+  <div id="tab-semana"><div class="week-grid" id="weekGrid"></div></div>
+  <div id="tab-alimentacao" class="hidden"><div class="food-wrap"><div class="food-card"><div class="food-title">Plano alimentar semanal <span class="macro-pill cal">~3.200 kcal/dia</span></div><div class="macro-bar"><span class="macro-pill prot">Proteína ~185g</span><span class="macro-pill carb">Carb ~380g</span><span class="macro-pill fat">Gordura ~80g</span></div><div class="creatina-box">Creatina 5g — todo dia, qualquer horário. Prefira pós-treino com carboidrato para melhor absorção.</div></div><div class="day-selector" id="daySelectorFood"></div><div id="foodPlanContent"></div></div></div>
+  <div id="tab-cardio" class="hidden"><div class="cardio-wrap">
+    <div class="cardio-card"><div class="fisio-title" style="color:var(--accent)">Plano para melhorar o gás — 8 semanas</div>
+      <div class="week-row"><span class="week-num">Sem 1–2</span><span style="flex:1;font-size:0.78rem">Caminhada 20 min + 4 tiros de 1 min correndo</span></div>
+      <div class="week-row"><span class="week-num">Sem 3–4</span><span style="flex:1;font-size:0.78rem">Correr 5 min / caminhar 2 min — repetir 4x</span></div>
+      <div class="week-row"><span class="week-num">Sem 5–6</span><span style="flex:1;font-size:0.78rem">Corrida contínua 20–25 min ritmo leve</span></div>
+      <div class="week-row"><span class="week-num">Sem 7–8</span><span style="flex:1;font-size:0.78rem">Corrida 30 min + 2 tiros de 2 min forte</span></div>
+    </div>
+    <div class="cardio-card"><div class="fisio-title" style="color:var(--accent2)">Condicionamento para o jiu — 2x por semana</div>
+      <div class="warmup-block"><div class="warmup-steps">• Pular corda 3 min → Polichinelo 1 min → Burpee 30s → Shrimping 10m → Rolamento 10x → Descanso 1 min — repetir 4 rounds</div>
+        <a class="yt-link" href="https://www.youtube.com/watch?v=BCGc0sXze1c" target="_blank"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>Circuito cardio jiu-jítsu</a>
+        <a class="yt-link" href="https://www.youtube.com/watch?v=RRMd2XFlFug" target="_blank"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>5 dicas para melhorar o gás no jiu</a>
+      </div>
+    </div>
+    <div class="cardio-card"><div class="fisio-title" style="color:var(--accent3)">Natação — técnica de respiração</div>
+      <div class="warmup-steps" style="font-size:0.78rem;line-height:1.8;color:var(--muted)">
+        <span style="color:var(--text)">Principal erro dos amadores:</span> segurar o ar dentro da água<br>
+        • Expire <strong style="color:var(--text)">totalmente</strong> dentro da água pelo nariz/boca<br>
+        • Inspire rápido na virada — boca, não nariz<br>
+        • Quanto mais expira, mais enche os pulmões<br><br>
+        <span style="color:var(--text)">Série progressiva:</span><br>
+        300m leve → 4x50m (30s descanso) → 4x25m forte (45s descanso) → 100m solto
+      </div>
+    </div>
+  </div></div>
+  <div id="tab-historico" class="hidden"><div class="history-wrap" id="historyWrap"></div></div>
+  <div id="tab-fisio" class="hidden"><div class="fisio-wrap">
+    <div class="fisio-card"><div class="fisio-title" style="color:var(--warn)">Restrições ativas — laudo RM ombro direito</div>
+      <div class="fisio-exercise"><span style="color:var(--danger)">✕</span><span>Desenvolvimento com barra acima da cabeça</span></div>
+      <div class="fisio-exercise"><span style="color:var(--danger)">✕</span><span>Elevação frontal acima de 90°</span></div>
+      <div class="fisio-exercise"><span style="color:var(--danger)">✕</span><span>Remada com cotovelo aberto/elevado</span></div>
+      <div class="fisio-exercise"><span style="color:var(--danger)">✕</span><span>Crawl com rotação completa do ombro direito</span></div>
+    </div>
+    <div class="fisio-card"><div class="fisio-title" style="color:var(--accent2)">Protocolo ombro — marque o que fez hoje</div><div id="fisioExercises"></div>
+      <a class="yt-link" href="https://www.youtube.com/watch?v=_2K9NRWJ860" target="_blank" style="margin-top:8px"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>Mobilidade ombro com elástico</a>
+    </div>
+    <div class="fisio-card"><div class="fisio-title">Protocolo coluna — 10 min diários</div><div id="colunaExercises"></div>
+      <a class="yt-link" href="https://www.youtube.com/watch?v=Qa3E-MFViL0" target="_blank" style="margin-top:8px"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>Mobilidade coluna lombar</a>
+    </div>
+    <div class="fisio-card" style="border-color:var(--accent3)"><div class="fisio-title" style="color:var(--accent3)">Sessões de fisioterapia</div>
+      <div style="display:flex;gap:7px;align-items:center;margin-bottom:9px;flex-wrap:wrap;">
+        <input type="date" id="fisioDate" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 8px;font-size:0.78rem;outline:none;flex:1;min-width:110px;">
+        <input type="text" id="fisioNote" placeholder="Observação..." style="flex:2;min-width:100px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 8px;font-size:0.78rem;outline:none;font-family:'DM Sans',sans-serif;">
+        <button onclick="addFisioSession()" style="background:var(--accent3);border:none;color:#000;border-radius:8px;padding:5px 11px;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer;">+</button>
+      </div>
+      <div id="fisioSessions"></div>
+    </div>
+  </div></div>
+  <div class="bottom-spacer"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://hwxfhyhduckhltqxoeah.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1XB0O75nv8-3zdwwtP1dgQ_8Lo4Nu6V';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let currentTab = 'semana';
+let currentFoodDay = 'seg';
+let isSignUp = false;
+let treinoCache = {};
+let fisioCache = [];
+let exDiarioCache = {};
+
+// AUTH
+async function handleAuth() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!email || !password) { showError('Preencha e-mail e senha.'); return; }
+  btn.disabled = true;
+  btn.textContent = isSignUp ? 'Criando...' : 'Entrando...';
+  const { data, error } = isSignUp
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  btn.textContent = isSignUp ? 'Criar conta' : 'Entrar';
+  if (error) { showError(error.message); return; }
+  if (isSignUp && !data.session) { showError('Conta criada! Verifique seu e-mail para confirmar, ou tente fazer login.'); return; }
+  currentUser = data.user || data.session?.user;
+  showApp();
+}
+
+function showError(msg) {
+  const err = document.getElementById('loginError');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+function toggleMode() {
+  isSignUp = !isSignUp;
+  document.getElementById('loginBtn').textContent = isSignUp ? 'Criar conta' : 'Entrar';
+  document.getElementById('authToggle').innerHTML = isSignUp
+    ? 'Já tem conta? <span onclick="toggleMode()">Entrar</span>'
+    : 'Não tem conta? <span onclick="toggleMode()">Criar conta</span>';
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  treinoCache = {}; fisioCache = []; exDiarioCache = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('userEmail').textContent = currentUser?.email || '';
+  updateMonthLabel();
+  await loadAllData();
+  renderWeek();
+}
+
+// DATA
+function showSync(msg) {
+  const s = document.getElementById('syncStatus');
+  s.textContent = msg; s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 2000);
+}
+
+async function loadAllData() {
+  if (!currentUser) return;
+  showSync('Carregando dados...');
+  const [{ data: treinos }, { data: fisios }, { data: exDiarios }] = await Promise.all([
+    sb.from('treino_dias').select('*').eq('user_id', currentUser.id),
+    sb.from('fisio_sessoes').select('*').eq('user_id', currentUser.id).order('data', { ascending: false }),
+    sb.from('exercicios_diarios').select('*').eq('user_id', currentUser.id),
+  ]);
+  treinoCache = {};
+  (treinos || []).forEach(t => { treinoCache[t.date_key] = { done: t.done, obs: t.obs, id: t.id }; });
+  fisioCache = fisios || [];
+  exDiarioCache = {};
+  (exDiarios || []).forEach(e => { exDiarioCache[`${e.date_key}_${e.tipo}`] = { indices: e.indices || [], id: e.id }; });
+  showSync('Sincronizado ✓');
+}
+
+async function saveTreino(dateKey, field, value) {
+  if (!currentUser) return;
+  showSync('Salvando...');
+  const existing = treinoCache[dateKey];
+  if (existing?.id) {
+    await sb.from('treino_dias').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', existing.id);
+    treinoCache[dateKey] = { ...existing, [field]: value };
+  } else {
+    const { data } = await sb.from('treino_dias').insert({ user_id: currentUser.id, date_key: dateKey, [field]: value }).select().single();
+    if (data) treinoCache[dateKey] = { done: data.done, obs: data.obs, id: data.id };
+  }
+  showSync('Salvo ✓');
+}
+
+async function toggleDone(dateKey) {
+  const current = treinoCache[dateKey]?.done || false;
+  const newVal = !current;
+  if (!treinoCache[dateKey]) treinoCache[dateKey] = {};
+  treinoCache[dateKey].done = newVal;
+  renderWeek();
+  await saveTreino(dateKey, 'done', newVal);
+  updateStats();
+}
+
+let obsTimers = {};
+function scheduleObsSave(dateKey, value) {
+  if (!treinoCache[dateKey]) treinoCache[dateKey] = {};
+  treinoCache[dateKey].obs = value;
+  clearTimeout(obsTimers[dateKey]);
+  obsTimers[dateKey] = setTimeout(() => saveTreino(dateKey, 'obs', value), 1200);
+}
+
+async function toggleFisioEx(idx, tipo) {
+  const todayKey = getTodayKey();
+  const cacheKey = `${todayKey}_${tipo}`;
+  let arr = [...(exDiarioCache[cacheKey]?.indices || [])];
+  arr = arr.includes(idx) ? arr.filter(i => i !== idx) : [...arr, idx];
+  if (!exDiarioCache[cacheKey]) exDiarioCache[cacheKey] = {};
+  exDiarioCache[cacheKey].indices = arr;
+  renderFisio();
+  const existing = exDiarioCache[cacheKey]?.id;
+  if (existing) {
+    await sb.from('exercicios_diarios').update({ indices: arr, updated_at: new Date().toISOString() }).eq('id', existing);
+  } else {
+    const { data } = await sb.from('exercicios_diarios').insert({ user_id: currentUser.id, date_key: todayKey, tipo, indices: arr }).select().single();
+    if (data) exDiarioCache[cacheKey].id = data.id;
+  }
+}
+
+async function addFisioSession() {
+  const date = document.getElementById('fisioDate').value;
+  const nota = document.getElementById('fisioNote').value;
+  if (!date || !currentUser) return;
+  const { data } = await sb.from('fisio_sessoes').insert({ user_id: currentUser.id, data: date, nota }).select().single();
+  if (data) { fisioCache.unshift(data); }
+  document.getElementById('fisioDate').value = '';
+  document.getElementById('fisioNote').value = '';
+  renderFisioSessions();
+  updateStats();
+}
+
+async function removeFisioSession(id) {
+  await sb.from('fisio_sessoes').delete().eq('id', id);
+  fisioCache = fisioCache.filter(s => s.id !== id);
+  renderFisioSessions();
+  updateStats();
+}
+
+// UTILS
+// getTodayKey defined above with getWeekDayKey
+function getWeekDayKey(key) {
+  const map = {seg:1,ter:2,qua:3,qui:4,sex:5,sab:6,dom:0};
+  const t = new Date(); const diff = map[key] - t.getDay();
+  const d = new Date(t); d.setDate(t.getDate() + diff);
+  // Use ISO format YYYY-MM-DD to avoid ambiguity across months/years
+  return d.toISOString().split('T')[0];
+}
+function getTodayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+function ytBtn(url, label) {
+  return `<a class="yt-link" href="${url}" target="_blank"><svg class="yt-icon" viewBox="0 0 24 24" fill="#ff5555"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>${label}</a>`;
+}
+
+// DAYS CONFIG
+const DAYS_CONFIG = [
+  { key:'seg', name:'Segunda', type:'Peito + Tríceps', local:'Bluefit ~13:30', tags:['musculo','jiu'], tagLabels:['Musculação','Jiu 16h'],
+    warmups:[
+      { title:'Aquecimento geral (5 min)', steps:'• 5 min esteira ritmo leve\n• Rotação de ombros para trás 2x10\n• Círculos de braço 10x\n• Cat-cow 10x — ativa a lombar', yt:'https://www.youtube.com/watch?v=3JEdmtr30nw', ytLabel:'Aquecimento articular' },
+      { title:'Ativação de peito (3 min)', steps:'• Flexão bodyweight 2x10\n• Abertura de braços com elástico 2x15\n• Rotação interna/externa ombro com elástico', yt:'https://www.youtube.com/watch?v=APzUylm0td8', ytLabel:'Aquecimento correto musculação' },
+    ],
+    exercises:[{name:'Supino reto barra',detail:'4x 8–10'},{name:'Supino inclinado halteres',detail:'3x 10–12'},{name:'Crossover cabo',detail:'3x 12–15'},{name:'Tríceps pulley corda',detail:'3x 12'},{name:'Tríceps testa',detail:'3x 10'}]
+  },
+  { key:'ter', name:'Terça', type:'Costas + Bíceps', local:'Prédio — flexível', tags:['musculo'], tagLabels:['Musculação'],
+    warmups:[
+      { title:'Aquecimento de costas (5 min)', steps:'• Dead hang na barra 2x20s — descomprime a lombar\n• Rotação torácica deitado 2x10 cada lado\n• Band pull apart elástico 2x15\n• Cat-cow 10x', yt:'https://www.youtube.com/watch?v=bzVK_6bQPo8', ytLabel:'Mobilidade torácica e ombros' },
+    ],
+    exercises:[{name:'Barra fixa (ou elástico assistido)',detail:'4x 6–10'},{name:'Remada curvada halter — cotovelo FECHADO',detail:'4x 10–12',ombro:true},{name:'Pullover halter',detail:'3x 12'},{name:'Rosca direta halteres',detail:'3x 10–12'},{name:'Rosca martelo',detail:'3x 12'}]
+  },
+  { key:'qua', name:'Quarta', type:'Pernas', local:'Bluefit ~13:30', tags:['musculo','jiu'], tagLabels:['Musculação','Jiu 16h'],
+    warmups:[
+      { title:'Aquecimento de pernas (5 min)', steps:'• Agachamento bodyweight 2x15\n• Avanço alternado sem carga 2x10\n• Elevação de joelho andando 2x10\n• Rotação de quadril 10x cada lado', yt:'https://www.youtube.com/watch?v=Y_a1-AvhCBs', ytLabel:'Aquecimento antes de treinar' },
+    ],
+    exercises:[{name:'Agachamento livre',detail:'4x 8–10'},{name:'Leg press 45°',detail:'3x 12'},{name:'Cadeira extensora',detail:'3x 12–15'},{name:'Mesa flexora',detail:'3x 12'},{name:'Panturrilha smith',detail:'4x 15–20'}]
+  },
+  { key:'qui', name:'Quinta', type:'Ombro + Core (leve)', local:'Prédio — antes das 18h', tags:['musculo','jiu'], tagLabels:['Ombro/Core','Aula 18h'],
+    warmups:[
+      { title:'Aquecimento ombro — obrigatório (8 min)', steps:'• Rotação interna/externa elástico 2x15 cada\n• Face pull elástico 2x15\n• Círculos de braço lentos 2x10\n• Rotação torácica sentado 2x10', yt:'https://www.youtube.com/watch?v=_2K9NRWJ860', ytLabel:'Mobilidade ombro com elástico' },
+    ],
+    exercises:[{name:'Desenvolvimento halteres sentado',detail:'3x 10–12',ombro:true},{name:'Elevação lateral até 80°',detail:'3x 12–15',ombro:true},{name:'Face pull elástico',detail:'3x 15'},{name:'Prancha frontal',detail:'3x 40–60s'},{name:'Bird-dog',detail:'3x 10 cada lado'},{name:'Cat-cow + rot. torácica',detail:'2x 10 cada'}]
+  },
+  { key:'sex', name:'Sexta', type:'Descanso ativo', local:'Mobilidade / caminhada', tags:['descanso'], tagLabels:['Descanso'],
+    warmups:[], exercises:[{name:'Caminhada 20–30 min',detail:'Substitui corrida por ora'},{name:'Protocolo coluna 10 min',detail:'Cat-cow, rot. torácica, hip hinge'}]
+  },
+  { key:'sab', name:'Sábado', type:'Natação', local:'Piscina', tags:['natacao'], tagLabels:['Natação'],
+    warmups:[
+      { title:'Aquecimento fora da água (10 min)', steps:'• Rotação de tornozelos 10x cada\n• Rotação de quadril 10x cada lado\n• Círculos de ombro SUAVE — 10 frente, 10 trás\n• Rotação cervical 5x cada lado\n• 5 flexões + 5 agachamentos\n⚠ Ombro direito: movimentos suaves, sem forçar amplitude', yt:'https://www.youtube.com/watch?v=_2K9NRWJ860', ytLabel:'Mobilidade ombro pré-natação' },
+    ],
+    exercises:[{name:'Braçada reta — sem rotação ombro direito',detail:'Principal técnica',ombro:true},{name:'Série 30–40 min',detail:'4x50m + 4x25m'},{name:'Mobilidade pós-natação',detail:'10 min'}]
+  },
+  { key:'dom', name:'Domingo', type:'Descanso total', local:'—', tags:['descanso'], tagLabels:['Descanso'], warmups:[], exercises:[] },
+];
+
+const FISIO_EXERCISES = ['Rotação externa elástico (cotovelo no corpo) — 3x15','Rotação interna elástico — 3x15','Face pull elástico — 3x15','Elevação lateral até 80° — 3x12','Serrátil anterior (wall slide) — 3x12'];
+const COLUNA_EXERCISES = ['Cat-cow — 2x10','Rotação torácica deitado — 2x10 cada','Hip hinge com bastão — 2x15','Alongamento psoas — 2x40s cada','Dead hang na barra — 2x30s'];
+
+const FOOD_PLANS = {
+  seg:{label:'Segunda — Treino + Jiu',meals:[{time:'07:00',name:'Café da manhã',food:'3 ovos mexidos + 2 fatias pão integral + pasta de amendoim',macro:'~480 kcal · 30g prot'},{time:'12:00',name:'Pré-treino',food:'Banana + 2 col aveia + whey (opcional)',macro:'~350 kcal · 25g prot'},{time:'14:30',name:'Pós-treino / Almoço',food:'Arroz 150g + frango 200g + feijão + salada',macro:'~650 kcal · 50g prot'},{time:'17:30',name:'Pré-jiu',food:'Cuscuz médio + 2 ovos cozidos',macro:'~400 kcal · 22g prot'},{time:'19:30',name:'Pós-jiu / Jantar',food:'Frango 180g + arroz 100g ou batata doce',macro:'~520 kcal · 45g prot'},{time:'21:00',name:'Ceia',food:'Omelete 2 ovos + queijo coalho',macro:'~280 kcal · 22g prot'}]},
+  ter:{label:'Terça — Treino prédio',meals:[{time:'07:00',name:'Café da manhã',food:'Cuscuz médio + 3 ovos estrelados + café',macro:'~480 kcal · 28g prot'},{time:'10:00',name:'Lanche',food:'Iogurte grego + banana + granola',macro:'~320 kcal · 18g prot'},{time:'12:30',name:'Almoço pós-treino',food:'Arroz + feijão + carne moída 200g + salada + azeite',macro:'~680 kcal · 48g prot'},{time:'15:30',name:'Lanche',food:'2 ovos cozidos + 1 fruta',macro:'~250 kcal · 15g prot'},{time:'19:30',name:'Jantar',food:'Macarrão integral 100g + molho vermelho + frango 180g',macro:'~600 kcal · 46g prot'},{time:'21:30',name:'Ceia',food:'Omelete 2 ovos + queijo',macro:'~260 kcal · 20g prot'}]},
+  qua:{label:'Quarta — Treino pernas + Jiu',meals:[{time:'07:00',name:'Café reforçado',food:'3 ovos + cuscuz grande + café com leite',macro:'~520 kcal · 30g prot'},{time:'12:00',name:'Pré-treino',food:'Arroz 100g + frango 120g',macro:'~400 kcal · 32g prot'},{time:'14:30',name:'Pós-treino / Almoço',food:'Batata doce 200g + frango 200g + feijão + salada',macro:'~620 kcal · 48g prot'},{time:'17:30',name:'Pré-jiu — IMPORTANTE',food:'Cuscuz médio + 2 ovos — não treina em jejum',macro:'~400 kcal · 22g prot'},{time:'19:30',name:'Pós-jiu / Jantar',food:'Arroz + frango + legumes refogados',macro:'~550 kcal · 44g prot'}]},
+  qui:{label:'Quinta — Treino leve + Aula 18h',meals:[{time:'07:00',name:'Café da manhã',food:'Tapioca 2 unid + 3 ovos mexidos + queijo',macro:'~480 kcal · 30g prot'},{time:'11:00',name:'Lanche',food:'Iogurte grego + granola',macro:'~280 kcal · 16g prot'},{time:'13:00',name:'Almoço pós-treino',food:'Arroz + frango 180g + feijão + salada + azeite',macro:'~620 kcal · 46g prot'},{time:'16:30',name:'Pré-aula (leve)',food:'Banana + pasta de amendoim',macro:'~280 kcal · 8g prot'},{time:'21:00',name:'Pós-aula / Jantar',food:'Macarrão integral + frango 180g + azeite',macro:'~580 kcal · 44g prot'}]},
+  sex:{label:'Sexta — Descanso + Cerveja',meals:[{time:'08:00',name:'Café da manhã',food:'3 ovos + pão integral + queijo + café',macro:'~420 kcal · 26g prot'},{time:'12:00',name:'Almoço',food:'Arroz + feijão + carne vermelha 200g + salada',macro:'~680 kcal · 48g prot'},{time:'16:00',name:'Lanche',food:'Frutas + iogurte ou omelete leve',macro:'~280 kcal · 16g prot'},{time:'19:00',name:'Jantar — coma antes',food:'Frango 180g + arroz + legumes',macro:'~520 kcal · 42g prot'},{time:'21:00',name:'Cerveja',food:'1 Stella Golden — beba devagar, aproveita',macro:'~150 kcal — ok!'}],tip:'Hidratação: 1 copo d\'água a cada cerveja. No dia seguinte capricha nas proteínas — ovos, frango, queijo.'},
+  sab:{label:'Sábado — Natação',meals:[{time:'07:00',name:'Pré-natação (leve)',food:'Banana + 2 torradas + café',macro:'~300 kcal · 10g prot'},{time:'10:00',name:'Pós-natação',food:'3 ovos + cuscuz grande + suco natural',macro:'~520 kcal · 30g prot'},{time:'13:00',name:'Almoço',food:'Arroz + feijão + frango 200g + salada',macro:'~650 kcal · 48g prot'},{time:'16:00',name:'Lanche',food:'Iogurte grego + banana',macro:'~250 kcal · 15g prot'},{time:'20:00',name:'Jantar',food:'Omelete 4 ovos + queijo + legumes',macro:'~420 kcal · 36g prot'}]},
+  dom:{label:'Domingo — Descanso',meals:[{time:'09:00',name:'Café da manhã',food:'Ovos + pão + queijo + café com leite',macro:'~480 kcal · 28g prot'},{time:'13:00',name:'Almoço em família',food:'Coma o que tiver — só garante proteína no prato',macro:'~700 kcal est.'},{time:'16:00',name:'Lanche',food:'Fruta + castanhas ou iogurte',macro:'~250 kcal · 8g prot'},{time:'20:00',name:'Jantar leve',food:'Sopa com frango ou omelete + arroz',macro:'~450 kcal · 32g prot'}]},
+};
+
+// RENDER WEEK
+function renderWeek() {
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+  DAYS_CONFIG.forEach(day => {
+    const dk = getWeekDayKey(day.key);
+    const dd = treinoCache[dk] || {};
+    const isDone = dd.done || false;
+    const isRest = day.tags.includes('descanso');
+    const card = document.createElement('div');
+    card.className = `day-card${isDone?' done':''}${isRest?' rest':''}`;
+    const tagsHtml = day.tags.map((t,i)=>`<span class="tag ${t}">${day.tagLabels[i]}</span>`).join('');
+    const warmupsHtml = day.warmups.length ? `<div class="section-label">Aquecimento</div>${day.warmups.map(w=>`<div class="warmup-block"><div class="warmup-title">${w.title}</div><div class="warmup-steps">${w.steps.replace(/\n/g,'<br>')}</div>${w.yt?ytBtn(w.yt,w.ytLabel):''}</div>`).join('')}` : '';
+    const exHtml = day.exercises.length ? `<div class="section-label" style="margin-top:8px">Exercícios</div><div class="exercise-list">${day.exercises.map(e=>`<div class="exercise"><span class="ex-name">${e.name}${e.ombro?' <span style="color:var(--warn);font-size:0.65rem">⚠</span>':''}</span><span class="ex-detail">${e.detail}</span></div>`).join('')}</div>` : '<p style="color:var(--muted);font-size:0.76rem;margin-top:8px">Dia de descanso</p>';
+    const ombroWarn = day.exercises.some(e=>e.ombro) ? `<div class="ombro-alert">⚠ Exercícios marcados: respeite amplitude, cotovelo baixo, pare se doer.</div>` : '';
+    card.innerHTML = `
+      <div class="day-header" onclick="toggleCard(this)">
+        <div class="day-left"><div class="day-dot"></div><div><div class="day-name">${day.name}</div><div class="day-type">${day.type} · ${day.local}</div></div></div>
+        <div class="day-right"><div style="display:flex;gap:3px;flex-wrap:wrap">${tagsHtml}</div><button class="btn-check" onclick="event.stopPropagation();toggleDone('${dk}')">${isDone?'✓ Feito':'Marcar'}</button><span class="chevron">▾</span></div>
+      </div>
+      <div class="day-body">
+        ${warmupsHtml}${exHtml}${ombroWarn}
+        <span class="section-label" style="margin-top:8px">Observações</span>
+        <textarea class="obs-input" rows="2" placeholder="Como foi? Peso, dor, energia..." oninput="scheduleObsSave('${dk}',this.value)">${dd.obs||''}</textarea>
+      </div>`;
+    grid.appendChild(card);
+  });
+  updateStats();
+}
+
+function toggleCard(header) {
+  const card = header.closest('.day-card');
+  card.classList.toggle('open');
+  header.querySelector('.chevron').style.transform = card.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+function updateStats() {
+  const done = Object.values(treinoCache).filter(d=>d.done).length;
+  document.getElementById('statFeitos').textContent = done;
+  let weekDone = 0;
+  DAYS_CONFIG.forEach(day => { const dk=getWeekDayKey(day.key); if(treinoCache[dk]?.done) weekDone++; });
+  document.getElementById('statSemana').textContent = `${weekDone}/5`;
+  document.getElementById('statFisio').textContent = fisioCache.length;
+  let seq = 0; const today = new Date();
+  for(let i=0;i<30;i++){const d=new Date(today);d.setDate(today.getDate()-i);const k=d.toISOString().split('T')[0];if(treinoCache[k]?.done)seq++;else if(i>0)break;}
+  document.getElementById('statSequencia').textContent = seq;
+}
+
+function renderFood() {
+  const days=[{k:'seg',l:'Seg'},{k:'ter',l:'Ter'},{k:'qua',l:'Qua'},{k:'qui',l:'Qui'},{k:'sex',l:'Sex'},{k:'sab',l:'Sáb'},{k:'dom',l:'Dom'}];
+  document.getElementById('daySelectorFood').innerHTML=days.map(d=>`<button class="day-btn${currentFoodDay===d.k?' active':''}" onclick="setFoodDay('${d.k}')">${d.l}</button>`).join('');
+  const plan=FOOD_PLANS[currentFoodDay];
+  document.getElementById('foodPlanContent').innerHTML=`<div class="food-card"><div class="food-title">${plan.label}</div>${plan.meals.map(m=>`<div class="food-row"><span class="food-time">${m.time}</span><div class="food-content"><div style="font-weight:500">${m.name}</div><div style="color:var(--muted);font-size:0.75rem;margin-top:1px">${m.food}</div><div class="food-macro">${m.macro}</div></div></div>`).join('')}${plan.tip?`<div class="tip-box">${plan.tip}</div>`:''}</div>`;
+}
+function setFoodDay(d){currentFoodDay=d;renderFood();}
+
+function renderHistory() {
+  const wrap=document.getElementById('historyWrap');wrap.innerHTML='';
+  for(let m=currentMonth;m>=Math.max(0,currentMonth-2);m--){
+    const y=currentYear;const monthName=new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const daysInMonth=new Date(y,m+1,0).getDate();const firstDay=new Date(y,m,1).getDay();
+    const doneCount=Object.entries(treinoCache).filter(([k,v])=>{const parts=k.split('-');return parseInt(parts[0])===y&&parseInt(parts[1])-1===m&&v.done;}).length;
+    const section=document.createElement('div');section.className='history-month';
+    let h='<div class="weekday-labels">'+['D','S','T','Q','Q','S','S'].map(d=>`<div class="weekday-label">${d}</div>`).join('')+'</div><div class="history-heatmap">';
+    for(let i=0;i<firstDay;i++)h+='<div class="heat-day"></div>';
+    for(let d=1;d<=daysInMonth;d++){const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;h+=`<div class="heat-day${treinoCache[k]?.done?' done':''}">${d}</div>`;}
+    h+='</div>';
+    section.innerHTML=`<div class="history-month-title">${monthName}</div>${h}<div class="history-summary"><div class="sum-item"><div class="sum-val">${doneCount}</div><div class="sum-label">Treinos realizados</div></div><div class="sum-item"><div class="sum-val">${doneCount>0?Math.round((doneCount/22)*100):0}%</div><div class="sum-label">Consistência</div></div></div>`;
+    wrap.appendChild(section);
+  }
+}
+
+function renderFisio() {
+  const todayKey=getTodayKey();
+  const fisio=(exDiarioCache[`${todayKey}_fisio`]?.indices||[]);
+  const coluna=(exDiarioCache[`${todayKey}_coluna`]?.indices||[]);
+  document.getElementById('fisioExercises').innerHTML=FISIO_EXERCISES.map((ex,i)=>`<div class="fisio-exercise"><div class="fisio-check${fisio.includes(i)?' checked':''}" onclick="toggleFisioEx(${i},'fisio')">✓</div><span>${ex}</span></div>`).join('');
+  document.getElementById('colunaExercises').innerHTML=COLUNA_EXERCISES.map((ex,i)=>`<div class="fisio-exercise"><div class="fisio-check${coluna.includes(i)?' checked':''}" onclick="toggleFisioEx(${i},'coluna')">✓</div><span>${ex}</span></div>`).join('');
+  renderFisioSessions();
+}
+
+function renderFisioSessions() {
+  const c=document.getElementById('fisioSessions');
+  if(!fisioCache.length){c.innerHTML='<p style="color:var(--muted);font-size:0.78rem">Nenhuma sessão registrada ainda.</p>';return;}
+  c.innerHTML=fisioCache.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.78rem;"><div><span style="font-weight:500">${s.data}</span>${s.nota?`<span style="color:var(--muted);margin-left:8px">${s.nota}</span>`:''}</div><span onclick="removeFisioSession('${s.id}')" style="color:var(--danger);cursor:pointer;font-size:0.72rem">✕</span></div>`).join('');
+}
+
+function changeMonth(dir){
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  updateMonthLabel();
+  if(currentTab==='semana')renderWeek();
+  if(currentTab==='historico')renderHistory();
+}
+function updateMonthLabel(){const l=new Date(currentYear,currentMonth,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});document.getElementById('monthLabel').textContent=l.charAt(0).toUpperCase()+l.slice(1);}
+
+function setTab(tab){
+  currentTab=tab;
+  const tabs=['semana','alimentacao','cardio','historico','fisio'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  tabs.forEach(t=>document.getElementById(`tab-${t}`).classList.toggle('hidden',t!==tab));
+  if(tab==='historico')renderHistory();
+  if(tab==='fisio')renderFisio();
+  if(tab==='alimentacao')renderFood();
+}
+
+// INIT — check session
+(async()=>{
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){currentUser=session.user;showApp();}
+})();
+</script>
+</body>
+</html>
